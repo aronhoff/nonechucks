@@ -9,7 +9,7 @@ class SafeDataset(torch.utils.data.Dataset):
     samples dynamically.
     """
 
-    def __init__(self, dataset, eager_eval=False):
+    def __init__(self, dataset, eager_eval=False, do_memoize=True):
         """Creates a `SafeDataset` wrapper around `dataset`."""
         self.dataset = dataset
         self.eager_eval = eager_eval
@@ -23,6 +23,9 @@ class SafeDataset(torch.utils.data.Dataset):
         # by attempting to access every sample in self.dataset.
         if self.eager_eval is True:
             self._build_index()
+
+        self.__dict__['__getitem__'] = self.__getitem__.__dict__['__func']
+        self.__getitem__.memoize = do_memoize
 
     def _safe_get_item(self, idx):
         """Returns None instead of throwing an error when dealing with an
@@ -81,6 +84,7 @@ class SafeDataset(torch.utils.data.Dataset):
         return (self._safe_get_item(i) for i in range(len(self))
                 if self._safe_get_item(i) is not None)
 
+    @memoize
     def __getitem__(self, idx):
         """Behaves like the standard __getitem__ for Dataset when the index
         has been built.
